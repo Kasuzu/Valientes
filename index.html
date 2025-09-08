@@ -50,7 +50,7 @@
     </div>
   </div>
 
-  <!-- HUD opcional (puedes quitarlo si no lo quieres) -->
+  <!-- HUD opcional -->
   <div id="hud" hidden>
     <button id="btnPrev" title="Anterior">⟨⟨</button>
     <button id="btnPlay" title="Play/Pause">⏯</button>
@@ -64,15 +64,21 @@
   <audio id="track" preload="auto" src="media/relato.mp3" crossorigin="anonymous" playsinline></audio>
 
   <!-- Escena A-Frame -->
-  <a-scene background="color: #000000">
-    <a-assets>
+  <a-scene
+    background="color: #000000"
+    renderer="antialias: true; colorManagement: true; powerPreference: high-performance; physicallyCorrectLights: false"
+    vr-mode-ui="enabled: true">
+
+    <a-assets timeout="60000">
       <!-- placeholder mínimo para evitar warnings -->
       <img id="placeholder" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAlEBz4Z7xvQAAAAASUVORK5CYII="/>
     </a-assets>
 
     <!-- Doble cielo para crossfade de panoramas 360 -->
-    <a-sky id="skyA" radius="20" material="shader: flat; src: #placeholder; transparent: true; opacity: 1"></a-sky>
-    <a-sky id="skyB" radius="20" material="shader: flat; src: #placeholder; transparent: true; opacity: 0"></a-sky>
+    <a-sky id="skyA" radius="20"
+           material="side: back; shader: flat; src: #placeholder; transparent: true; opacity: 1"></a-sky>
+    <a-sky id="skyB" radius="20"
+           material="side: back; shader: flat; src: #placeholder; transparent: true; opacity: 0"></a-sky>
   </a-scene>
 
   <script>
@@ -104,6 +110,7 @@
     const btnNext = document.getElementById('btnNext');
     const timeBox = document.getElementById('time');
 
+    const scene = document.querySelector('a-scene');
     const skyA = document.getElementById('skyA');
     const skyB = document.getElementById('skyB');
 
@@ -127,10 +134,10 @@
     }
 
     function setSkyTexture(el, url) {
-      // url() ayuda a evitar edge-cases en algunos navegadores VR
       el.setAttribute('material', 'transparent', true);
+      el.setAttribute('material', 'side', 'back');
+      // usar url() ayuda a algunos navegadores
       el.setAttribute('material', 'src', `url(${url})`);
-      // La opacidad la controlamos manualmente
     }
 
     function fmt(t) {
@@ -237,7 +244,28 @@
 
       if (rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(updateLoop);
+
+      // Intentar entrar VR automáticamente (opcional)
+      try { scene.enterVR(); } catch(e) {}
     }
+
+    // Reforzar estado al (re)entrar VR: re-aplicar opacidades y textura actual
+    scene.addEventListener('enter-vr', () => {
+      const current = usingA ? skyA : skyB;
+      const other   = usingA ? skyB : skyA;
+      // aseguramos side/back y transparencias
+      current.setAttribute('material','side','back');
+      other.setAttribute('material','side','back');
+      setOpacity(current, 1);
+      setOpacity(other, 0);
+      // forzar actualización del mapa de textura
+      try {
+        const m1 = current.getObject3D('mesh')?.material;
+        const m2 = other.getObject3D('mesh')?.material;
+        if (m1?.map) m1.map.needsUpdate = true;
+        if (m2?.map) m2.map.needsUpdate = true;
+      } catch(_) {}
+    });
 
     // Controles
     btnUI.addEventListener('click', startExperience);
@@ -264,4 +292,5 @@
   </script>
 </body>
 </html>
+
 
