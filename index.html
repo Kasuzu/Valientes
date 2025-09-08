@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>La Guaca del Taita 360 — Quest 3</title>
+  <!-- A-Frame (WebXR) -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #000; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    #ui {
+      position: fixed; inset: 0; display: grid; place-items: center;
+      background: radial-gradient(1200px 800px at 50% 50%, rgba(0,0,0,.75), rgba(0,0,0,.95));
+      color: #fff; z-index: 10; text-align: center; padding: 24px;
+    }
+    #ui button {
+      font-size: 18px; padding: 12px 20px; border-radius: 12px; border: 0; cursor: pointer;
+      background: #14b8a6; color: #00110f; font-weight: 700; box-shadow: 0 8px 30px rgba(0,0,0,.35);
+    }
+    #caption {
+      position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+      padding: 10px 16px; color: #fff; background: rgba(0,0,0,.55); border-radius: 10px; font-size: 18px;
+      backdrop-filter: blur(6px); z-index: 5; max-width: 92vw; text-align: center;
+    }
+    #hud {
+      position: fixed; left: 50%; top: 14px; transform: translateX(-50%);
+      display: flex; gap: 10px; z-index: 6; align-items: center;
+      background: rgba(0,0,0,.4); padding: 8px 10px; border-radius: 999px; backdrop-filter: blur(6px);
+    }
+    #hud button {
+      border: 0; border-radius: 999px; padding: 6px 10px; background: rgba(255,255,255,.1); color: #fff; cursor: pointer;
+    }
+    #time {
+      font-variant-numeric: tabular-nums; font-weight: 600; padding: 0 6px;
+    }
+  </style>
+</head>
+<body>
+  <!-- UI para desbloquear audio por gesto del usuario -->
+  <div id="ui">
+    <div>
+      <h1 style="margin: 0 0 8px">La Guaca del Taita — 360</h1>
+      <p style="opacity:.9;max-width:740px;margin:0 auto 14px">
+        Reproduce un único audio (<code>media/relato.mp3</code>) y sincroniza panoramas 360 en los tiempos (segundos) indicados.
+      </p>
+      <button id="btnStart">Iniciar experiencia</button>
+      <p style="margin-top:10px;opacity:.7;font-size:13px">Sugerido: JPG/WebP 4096×2048 (o 8192×4096 si es necesario), calidad 70–80.</p>
+    </div>
+  </div>
+
+  <!-- HUD opcional (puedes quitarlo si no lo quieres) -->
+  <div id="hud" hidden>
+    <button id="btnPrev" title="Anterior">⟨⟨</button>
+    <button id="btnPlay" title="Play/Pause">⏯</button>
+    <button id="btnNext" title="Siguiente">⟩⟩</button>
+    <span id="time">00:00</span>
+  </div>
+
+  <div id="caption" hidden></div>
+
+  <!-- Audio fuente -->
+  <audio id="track" preload="auto" src="media/relato.mp3" crossorigin="anonymous" playsinline></audio>
+
+  <!-- Escena A-Frame -->
+  <a-scene background="color: #000000">
+    <a-assets>
+      <!-- placeholder mínimo para evitar warnings -->
+      <img id="placeholder" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAlEBz4Z7xvQAAAAASUVORK5CYII="/>
+    </a-assets>
+
+    <!-- Doble cielo para crossfade de panoramas 360 -->
+    <a-sky id="skyA" radius="20" material="shader: flat; src: #placeholder; transparent: true; opacity: 1"></a-sky>
+    <a-sky id="skyB" radius="20" material="shader: flat; src: #placeholder; transparent: true; opacity: 0"></a-sky>
+  </a-scene>
+
+  <script>
+    // === Cronograma (en segundos) ===
+    const schedule = [
+      { t: 0,  src: 'media/titulo.png',    caption: 'La Guaca del Taita' },
+      { t: 2,  src: 'media/escena_1.png',  caption: 'En lo alto de las montañas de Sandoná, vivía un anciano taita llamado Julián...' },
+      { t: 11, src: 'media/escena_2.png',  caption: 'Cada tarde, su nieta Amalia se sentaba a su lado para escuchar historias.' },
+      { t: 17, src: 'media/escena_3.png',  caption: 'El taita le habló de una guaca escondida...' },
+      { t: 24, src: 'media/escena_4.png',  caption: 'Amalia soñó con hallar aquella guaca. Una mañana...' },
+      { t: 32, src: 'media/escena_5.png',  caption: 'Escuchó el río cantar, vio mariposas azules guiándola.' },
+      { t: 37, src: 'media/escena_6.png',  caption: 'Al llegar a una cueva pequeña, encontró símbolos tallados en piedra...' },
+      { t: 44, src: 'media/escena_7.png',  caption: 'Amalia comprendió que los abuelos habían guardado ahí su memoria...' },
+      { t: 53, src: 'media/escena_8.png',  caption: 'Cuando volvió a casa, contó a su abuelo lo que había visto...' },
+      { t: 59, src: 'media/escena_9.png',  caption: 'El taita dijo: La verdadera guaca está en nuestras raíces...' },
+      { t: 70, src: 'media/escena_10.png', caption: 'Desde entonces, Amalia guardó en su corazón la certeza...' }
+    ].sort((a,b)=>a.t-b.t);
+
+    const FADE_MS = 800; // duración del crossfade
+
+    const audio   = document.getElementById('track');
+    const btnUI   = document.getElementById('btnStart');
+    const overlay = document.getElementById('ui');
+    const caption = document.getElementById('caption');
+
+    const hud     = document.getElementById('hud');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnNext = document.getElementById('btnNext');
+    const timeBox = document.getElementById('time');
+
+    const skyA = document.getElementById('skyA');
+    const skyB = document.getElementById('skyB');
+
+    let usingA = true;       // cuál sky está al frente (opacidad 1)
+    let idx = -1;            // índice actual
+    let rafId = null;        // id del requestAnimationFrame
+    // Estado de fade manual
+    let fading = false;
+    let fadeStart = 0;
+    let fadeDur = FADE_MS;
+    let frontEl = null;
+    let backEl  = null;
+
+    function setCaption(text) {
+      if (!text) { caption.hidden = true; caption.textContent = ''; return; }
+      caption.hidden = false; caption.textContent = text;
+    }
+
+    function setOpacity(el, value) {
+      el.setAttribute('material', 'opacity', value);
+    }
+
+    function setSkyTexture(el, url) {
+      // url() ayuda a evitar edge-cases en algunos navegadores VR
+      el.setAttribute('material', 'transparent', true);
+      el.setAttribute('material', 'src', `url(${url})`);
+      // La opacidad la controlamos manualmente
+    }
+
+    function fmt(t) {
+      t = Math.max(0, t|0);
+      const m = (t/60)|0, s = t%60;
+      return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    }
+
+    function findCueIndexAtTime(t) {
+      // mayor i tal que schedule[i].t <= t (o -1 si antes del primero)
+      let lo = 0, hi = schedule.length - 1, ans = -1;
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (schedule[mid].t <= t) { ans = mid; lo = mid + 1; }
+        else { hi = mid - 1; }
+      }
+      return ans;
+    }
+
+    function startFade(toIndex, instant = false) {
+      const cue = schedule[toIndex]; if (!cue) return;
+
+      // Definir front/back según cuál está visible ahora
+      frontEl = usingA ? skyA : skyB;
+      backEl  = usingA ? skyB : skyA;
+
+      // Cargar textura de destino en el back
+      setSkyTexture(backEl, cue.src);
+
+      // Forzar opacidades de inicio del crossfade
+      setOpacity(backEl, 0);
+      setOpacity(frontEl, 1);
+
+      if (instant || FADE_MS <= 0) {
+        setOpacity(backEl, 1);
+        setOpacity(frontEl, 0);
+        usingA = !usingA;
+        idx = toIndex;
+        setCaption(cue.caption);
+        fading = false;
+        return;
+      }
+
+      // Comenzar fade manual
+      fadeStart = performance.now();
+      fadeDur   = FADE_MS;
+      fading    = true;
+      idx       = toIndex;
+      setCaption(cue.caption);
+    }
+
+    function updateFade(now) {
+      if (!fading) return;
+      const p = Math.min(1, (now - fadeStart) / fadeDur);
+      // lineal
+      setOpacity(backEl, p);
+      setOpacity(frontEl, 1 - p);
+
+      if (p >= 1) {
+        fading = false;
+        usingA = !usingA; // ahora el back pasó a ser front
+      }
+    }
+
+    function updateLoop(now) {
+      // Actualizar visor de tiempo
+      timeBox.textContent = fmt(audio.currentTime|0);
+
+      // Gestionar fade manual
+      updateFade(now);
+
+      // Selección de cue por tiempo real del audio
+      const ct = audio.currentTime || 0;
+      const target = findCueIndexAtTime(ct + 0.001);
+      if (target !== idx && target >= 0) {
+        const jump = Math.abs(target - idx) > 1; // si saltó mucho, sin fade
+        startFade(target, jump);
+      }
+      rafId = requestAnimationFrame(updateLoop);
+    }
+
+    async function preloadImages(list) {
+      await Promise.all(list.map(item => new Promise(res => {
+        const im = new Image(); im.onload = res; im.onerror = res; im.src = item.src;
+      })));
+    }
+
+    async function startExperience() {
+      // Preload para evitar parpadeos
+      await preloadImages(schedule);
+
+      // Mostrar primera pano de una
+      if (schedule.length) {
+        setSkyTexture(skyA, schedule[0].src);
+        setOpacity(skyA, 1);
+        setOpacity(skyB, 0);
+        usingA = true; idx = 0; setCaption(schedule[0].caption);
+      }
+
+      try { await audio.play(); } catch (e) { console.warn('Audio bloqueado hasta interacción:', e); }
+
+      overlay.style.display = 'none';
+      hud.hidden = false;
+
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(updateLoop);
+    }
+
+    // Controles
+    btnUI.addEventListener('click', startExperience);
+    btnPlay.addEventListener('click', () => {
+      if (audio.paused) audio.play(); else audio.pause();
+    });
+    btnPrev.addEventListener('click', () => {
+      const prev = Math.max(0, idx - 1);
+      audio.currentTime = schedule[prev].t + 0.01;
+      startFade(prev, /*instant*/ true);
+    });
+    btnNext.addEventListener('click', () => {
+      const next = Math.min(schedule.length - 1, idx + 1);
+      audio.currentTime = schedule[next].t + 0.01;
+      startFade(next, /*instant*/ true);
+    });
+
+    // Tap en cualquier parte para play/pause (opcional)
+    document.addEventListener('click', (e) => {
+      if (e.target === btnUI || e.target.closest('#hud')) return;
+      if (overlay.style.display !== 'none') return; // aún no inicia
+      if (audio.paused) audio.play(); else audio.pause();
+    });
+  </script>
+</body>
+</html>
+
