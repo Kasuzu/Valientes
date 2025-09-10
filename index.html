@@ -3,106 +3,131 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>La Guaca del Taita 360 — Quest 3</title>
+  <title>La Guaca del Taita 360 — Quest 3 (VR Mejorado)</title>
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
+    html, body { height: 100%; }
     body { margin: 0; background: #000; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
     .btn { cursor: pointer; }
+
+    /* DOM Overlay (visible dentro del casco si WebXR dom-overlay está disponible) */
+    #overlay {
+      position: fixed; inset: auto 0 16px 0; display: flex; gap: 12px; justify-content: center; pointer-events: auto;
+      z-index: 10; padding: 6px 10px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    }
+    #overlay button {
+      font: 600 14px/1 system-ui; padding: 10px 14px; border-radius: 999px; border: 0; background: #0ea5e9; color: #00111a;
+    }
+    #overlay button.secondary { background:#334155; color:#fff; }
+    #overlay [hidden] { display:none !important; }
   </style>
 </head>
 <body>
-  <!-- Audio -->
+  <!-- Audio narración -->
   <audio id="track" preload="auto" src="media/relato.mp3" crossorigin="anonymous" playsinline></audio>
+
+  <!-- Overlay 2D usable dentro de VR (si el navegador soporta dom-overlay) -->
+  <div id="overlay" hidden>
+    <button id="ovPlay">⏯ Reproducir / Pausar</button>
+    <button id="ovRecenter" class="secondary">⟳ Recentrar</button>
+    <button id="ovExit" class="secondary">⛶ Salir VR</button>
+  </div>
 
   <a-scene
     background="color: #000000"
     renderer="antialias: true; colorManagement: true; powerPreference: high-performance; physicallyCorrectLights: false; alpha: false"
-    webxr="referenceSpaceType: local-floor; optionalFeatures: local-floor"
+    webxr="referenceSpaceType: local-floor; optionalFeatures: local-floor, dom-overlay, hand-tracking, layers; overlayElement: #overlay"
     vr-mode-ui="enabled: true">
 
     <a-assets timeout="60000">
+      <!-- Placeholder mínimo para inicializar materiales -->
       <img id="placeholder" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAlEBz4Z7xvQAAAAASUVORK5CYII="/>
+      <!-- Sugerencia: agrega aquí <img> con id para cada escena para precarga inmediata: -->
+      <!-- <img id="escena_1" src="media/escena_1.jpg" crossorigin="anonymous"> -->
     </a-assets>
 
-    <!-- Cámara + cursores -->
+    <!-- RIG + Cámara -->
     <a-entity id="rig" position="0 1.6 0">
-      <a-entity id="cam" camera look-controls wasd-controls-enabled="false">
-        <!-- ====== MENÚ 3D centrado (hijo de la cámara) ====== -->
-        <a-entity id="menuRoot" position="0 0 -1.5" rotation="0 0 0" scale="1 1 1">
+      <a-entity id="cam" camera look-controls wasd-controls-enabled="false"></a-entity>
+
+      <!-- ====== MENÚ 3D: anclado al mundo pero "sigue" a la vista con lerp ====== -->
+      <a-entity id="menuAnchor" follow-ui="distance: 1.6; height: -0.05; lerp: 0.12">
+        <a-entity id="menuRoot" position="0 0 0" rotation="0 0 0" scale="1 1 1">
           <!-- Fondo -->
-          <a-entity geometry="primitive: plane; width: 1.2; height: 0.62"
+          <a-entity geometry="primitive: plane; width: 1.28; height: 0.70"
                     material="color: #000; opacity: 0.55; transparent: true; shader: flat"
                     position="0 0 0"></a-entity>
 
           <!-- Título -->
-          <a-text font="kelsonsans" value="La Guaca del Taita, Nariño"
-                  width="1.1" position="-0.53 0.22 0.01" color="#FFF"></a-text>
+          <a-entity text="value: La Guaca del Taita, Nariño; width: 1.22; align: left; color: #FFF; wrapCount: 28"
+                    position="-0.59 0.26 0.01"></a-entity>
 
           <!-- Botones fila 1 -->
-          <a-entity id="btnStart" class="clickable btn"
-                    geometry="primitive: plane; width: 0.32; height: 0.12"
+          <a-entity id="btnStart" class="clickable btn ui-button"
+                    geometry="primitive: plane; width: 0.34; height: 0.12"
                     material="color: #14b8a6; opacity: 0.95; shader: flat"
-                    position="-0.38 0.05 0.01">
-            <a-text value="INICIAR" width="0.6" align="center" color="#00110f" position="0 0 0.01"></a-text>
+                    position="-0.38 0.07 0.01">
+            <a-entity text="value: INICIAR; width: 0.6; align: center; color: #00110f" position="0 0 0.01"></a-entity>
           </a-entity>
 
-          <a-entity id="btnVR" class="clickable btn"
-                    geometry="primitive: plane; width: 0.32; height: 0.12"
+          <a-entity id="btnVR" class="clickable btn ui-button"
+                    geometry="primitive: plane; width: 0.34; height: 0.12"
                     material="color: #64748b; opacity: 0.95; shader: flat"
-                    position="0.38 0.05 0.01">
-            <a-text value="ENTRAR VR" width="0.6" align="center" color="#fff" position="0 0 0.01"></a-text>
+                    position="0.38 0.07 0.01">
+            <a-entity text="value: ENTRAR VR; width: 0.6; align: center; color: #fff" position="0 0 0.01"></a-entity>
           </a-entity>
 
           <!-- Botones fila 2 -->
-          <a-entity id="btnPrev" class="clickable btn"
-                    geometry="primitive: plane; width: 0.28; height: 0.12"
+          <a-entity id="btnPrev" class="clickable btn ui-button"
+                    geometry="primitive: plane; width: 0.30; height: 0.12"
                     material="color: #334155; opacity: 0.95; shader: flat"
-                    position="-0.54 -0.13 0.01">
-            <a-text value="⟨⟨ Anterior" width="0.55" align="center" color="#fff" position="0 0 0.01"></a-text>
+                    position="-0.56 -0.12 0.01">
+            <a-entity text="value: ⟨⟨ Anterior; width: 0.60; align: center; color: #fff" position="0 0 0.01"></a-entity>
           </a-entity>
 
-          <a-entity id="btnPlay" class="clickable btn"
-                    geometry="primitive: plane; width: 0.28; height: 0.12"
+          <a-entity id="btnPlay" class="clickable btn ui-button"
+                    geometry="primitive: plane; width: 0.30; height: 0.12"
                     material="color: #0ea5e9; opacity: 0.95; shader: flat"
-                    position="-0.12 -0.13 0.01">
-            <a-text id="playLabel" value="⏯ Play/Pause" width="0.55" align="center" color="#00111a" position="0 0 0.01"></a-text>
+                    position="-0.12 -0.12 0.01">
+            <a-entity id="playLabel" text="value: ⏯ Play/Pause; width: 0.60; align: center; color: #00111a" position="0 0 0.01"></a-entity>
           </a-entity>
 
-          <a-entity id="btnNext" class="clickable btn"
-                    geometry="primitive: plane; width: 0.28; height: 0.12"
+          <a-entity id="btnNext" class="clickable btn ui-button"
+                    geometry="primitive: plane; width: 0.30; height: 0.12"
                     material="color: #334155; opacity: 0.95; shader: flat"
-                    position="0.30 -0.13 0.01">
-            <a-text value="Siguiente ⟩⟩" width="0.55" align="center" color="#fff" position="0 0 0.01"></a-text>
+                    position="0.32 -0.12 0.01">
+            <a-entity text="value: Siguiente ⟩⟩; width: 0.60; align: center; color: #fff" position="0 0 0.01"></a-entity>
           </a-entity>
 
-          <!-- Tiempo -->
-          <a-text id="time3d" font="kelsonsans" value="00:00"
-                  width="0.8" position="0.52 -0.31 0.01" align="right" color="#fff"></a-text>
+          <!-- Barra de progreso (anclada a la izquierda) -->
+          <a-entity id="prog" position="0 -0.30 0.01">
+            <a-entity id="progBg" geometry="primitive: plane; width: 1.08; height: 0.05"
+                      material="color: #0b0b0b; opacity: 0.75; shader: flat" position="0 0 0"></a-entity>
+            <a-entity id="progFill" geometry="primitive: plane; width: 0.02; height: 0.05"
+                      material="color: #22d3ee; opacity: 0.95; shader: flat" position="-0.53 0 0.001"></a-entity>
+            <a-entity id="time3d" text="value: 00:00; align: right; width: 0.9; color: #fff" position="0.54 -0.06 0.01"></a-entity>
+          </a-entity>
         </a-entity>
 
-        <!-- Caption bajo el menú (también hijo de la cámara) -->
-        <a-text id="caption3d" font="kelsonsans"
-                value="Pulsa INICIAR para comenzar"
-                width="1.6" position="-0.8 -0.55 -1.5" color="#fff"></a-text>
-
-        <!-- Cursor mouse (desktop) -->
-        <a-entity id="mouseRay" cursor="rayOrigin: mouse"
-                  raycaster="objects: .clickable; far: 10"></a-entity>
+        <!-- Caption multilinea -->
+        <a-entity id="caption3d" text="value: Pulsa INICIAR para comenzar; width: 1.6; color: #fff; wrapCount: 44; baseline: top; align: left"
+                  position="-0.8 -0.60 -0.01"></a-entity>
       </a-entity>
 
-      <!-- Controles VR (láser) -->
-      <a-entity laser-controls="hand: left"  raycaster="objects: .clickable; far: 10"></a-entity>
-      <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 10"></a-entity>
+      <!-- Controles VR (láser) + eventos de joystick -->
+      <a-entity id="leftHand"  laser-controls="hand: left"  raycaster="objects: .clickable; far: 10" oculus-touch-controls="hand: left; model: false"></a-entity>
+      <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .clickable; far: 10" oculus-touch-controls="hand: right; model: false"></a-entity>
+      <!-- (Opcional) manos sin controladores si hay hand-tracking: -->
+      <a-entity id="leftHandHT"  hand-tracking-controls="hand: left"  visible="false"></a-entity>
+      <a-entity id="rightHandHT" hand-tracking-controls="hand: right" visible="false"></a-entity>
     </a-entity>
 
     <!-- Cielos 360 con crossfade -->
-    <a-sky id="skyA" radius="20"
-           material="side: back; shader: flat; src: #placeholder; transparent: true; opacity: 1"></a-sky>
-    <a-sky id="skyB" radius="20"
-           material="side: back; shader: flat; src: #placeholder; transparent: true; opacity: 0"></a-sky>
+    <a-sky id="skyA" radius="20" material="side: back; shader: flat; src: #placeholder; transparent: true; opacity: 1"></a-sky>
+    <a-sky id="skyB" radius="20" material="side: back; shader: flat; src: #placeholder; transparent: true; opacity: 0"></a-sky>
   </a-scene>
 
   <script>
@@ -124,18 +149,28 @@
     const FADE_MS = 800;
 
     // Refs
-    const audio     = document.getElementById('track');
-    const scene     = document.querySelector('a-scene');
-    const skyA      = document.getElementById('skyA');
-    const skyB      = document.getElementById('skyB');
-    const caption3d = document.getElementById('caption3d');
-    const time3d    = document.getElementById('time3d');
+    const audio      = document.getElementById('track');
+    const scene      = document.querySelector('a-scene');
+    const skyA       = document.getElementById('skyA');
+    const skyB       = document.getElementById('skyB');
+    const caption3d  = document.getElementById('caption3d');
+    const time3d     = document.getElementById('time3d');
+    const progFill   = document.getElementById('progFill');
 
-    const btnStart  = document.getElementById('btnStart');
-    const btnVR     = document.getElementById('btnVR');
-    const btnPrev   = document.getElementById('btnPrev');
-    const btnPlay   = document.getElementById('btnPlay');
-    const btnNext   = document.getElementById('btnNext');
+    const btnStart   = document.getElementById('btnStart');
+    const btnVR      = document.getElementById('btnVR');
+    const btnPrev    = document.getElementById('btnPrev');
+    const btnPlay    = document.getElementById('btnPlay');
+    const btnNext    = document.getElementById('btnNext');
+    const playLabel  = document.getElementById('playLabel');
+
+    const leftHand   = document.getElementById('leftHand');
+    const rightHand  = document.getElementById('rightHand');
+
+    const ov         = document.getElementById('overlay');
+    const ovPlay     = document.getElementById('ovPlay');
+    const ovExit     = document.getElementById('ovExit');
+    const ovRecenter = document.getElementById('ovRecenter');
 
     // Estado
     let usingA = true, idx = -1, rafId = null;
@@ -143,7 +178,7 @@
     let frontEl = null, backEl  = null;
 
     // Utils
-    function setCaption(text){ caption3d.setAttribute('value', text || ''); }
+    function setCaption(text){ caption3d.setAttribute('text', 'value', text || ''); }
     function fmt(t){ t=Math.max(0, t|0); const m=(t/60)|0, s=t%60; return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; }
     function findCueIndexAtTime(t){ let lo=0,hi=schedule.length-1,ans=-1; while(lo<=hi){ const mid=(lo+hi)>>1; if(schedule[mid].t<=t){ans=mid;lo=mid+1;} else hi=mid-1;} return ans; }
 
@@ -171,6 +206,10 @@
         if (tex){ mesh.material.map = null; try{ tex.dispose(); }catch(_){ } mesh.material.needsUpdate = true; }
       }
     }
+    function preloadNext(i){
+      const next = schedule[i+1]; if(!next) return;
+      const img = new Image(); img.crossOrigin='anonymous'; img.src = next.src; // calentamos caché de red
+    }
 
     function startFade(toIndex, instant=false){
       const cue = schedule[toIndex]; if(!cue) return;
@@ -183,83 +222,148 @@
       if (instant || FADE_MS<=0){
         setOpacity(backEl,1); setOpacity(frontEl,0);
         disposeTexture(frontEl);
-        usingA=!usingA; idx=toIndex; setCaption(cue.caption); fading=false; return;
+        usingA=!usingA; idx=toIndex; setCaption(cue.caption); fading=false; updateProgress(); preloadNext(idx);
+        return;
       }
-      fadeStart=performance.now(); fadeDur=FADE_MS; fading=true; idx=toIndex; setCaption(cue.caption);
+      fadeStart=performance.now(); fadeDur=FADE_MS; fading=true; idx=toIndex; setCaption(cue.caption); preloadNext(idx);
     }
+
     function updateFade(now){
       if(!fading) return;
       const p=Math.min(1,(now-fadeStart)/fadeDur);
       setOpacity(backEl,p); setOpacity(frontEl,1-p);
       if(p>=1){ fading=false; disposeTexture(frontEl); usingA=!usingA; }
     }
+
+    function updateProgress(){
+      const dur = Math.max(1, audio.duration || 1);
+      const t   = Math.max(0, Math.min(dur, audio.currentTime || 0));
+      time3d.setAttribute('text', 'value', fmt(t|0));
+      // Llenado de barra (ancho útil ~1.06). Mantener borde izquierdo fijo en -0.53
+      const frac = t / dur;
+      const maxW = 1.06; // ancho total
+      const w = Math.max(0.02, frac * maxW);
+      progFill.setAttribute('geometry', 'width', w);
+      progFill.object3D.position.x = -0.53 + (w/2);
+    }
+
     function updateLoop(now){
-      time3d.setAttribute('value', fmt(audio.currentTime|0));
       updateFade(now);
+      updateProgress();
       const ct=audio.currentTime||0;
       const target = findCueIndexAtTime(ct+0.001);
       if (target!==idx && target>=0) startFade(target, Math.abs(target-idx)>1);
       rafId = requestAnimationFrame(updateLoop);
     }
 
-    // FX botones
-    function addButtonFX(el){
-      el.addEventListener('mouseenter', ()=> el.setAttribute('scale','1.05 1.05 1'));
-      el.addEventListener('mouseleave', ()=> el.setAttribute('scale','1 1 1'));
-      el.addEventListener('mousedown',  ()=> el.setAttribute('scale','0.97 0.97 1'));
-      el.addEventListener('mouseup',    ()=> el.setAttribute('scale','1.02 1.02 1'));
-      el.classList.add('clickable');
+    function skipSec(sec){
+      const nt = Math.max(0, Math.min((audio.currentTime||0) + sec, audio.duration||1e9));
+      audio.currentTime = nt;
+      const target = findCueIndexAtTime(nt);
+      if (target>=0) startFade(target, true);
     }
-    [btnStart, btnVR, btnPrev, btnPlay, btnNext].forEach(addButtonFX);
 
-    // Botones
+    // HÁPTICOS (si están disponibles)
+    function hapticPulse(handEl, strength=0.4, duration=35){
+      const gp = handEl.components['tracked-controls']?.controller;
+      const act = gp?.hapticActuators?.[0];
+      try{ act?.pulse(strength, duration); }catch(_){ /* noop */ }
+    }
+
+    // ===== Componentes =====
+    AFRAME.registerComponent('follow-ui', {
+      schema: {distance:{default:1.6}, height:{default:-0.05}, lerp:{default:0.12}},
+      init(){ this.v = new THREE.Vector3(); this.t = new THREE.Vector3(); },
+      tick(){
+        const cam = this.el.sceneEl.camera.el;
+        if(!cam) return;
+        cam.object3D.getWorldDirection(this.v);
+        this.t.copy(cam.object3D.position).add(this.v.multiplyScalar(this.data.distance));
+        this.t.y = cam.object3D.position.y + this.data.height;
+        this.el.object3D.position.lerp(this.t, this.data.lerp);
+        this.el.object3D.lookAt(cam.object3D.position.x, cam.object3D.position.y, cam.object3D.position.z);
+      }
+    });
+
+    AFRAME.registerComponent('ui-button', {
+      init(){
+        const el = this.el;
+        el.classList.add('clickable');
+        el.addEventListener('mouseenter', ()=> el.setAttribute('scale','1.05 1.05 1'));
+        el.addEventListener('mouseleave', ()=> el.setAttribute('scale','1 1 1'));
+        el.addEventListener('mousedown',  ()=> el.setAttribute('scale','0.97 0.97 1'));
+        el.addEventListener('mouseup',    ()=> el.setAttribute('scale','1.02 1.02 1'));
+        el.addEventListener('click', ()=>{
+          hapticPulse(leftHand, 0.5, 30); hapticPulse(rightHand, 0.5, 30);
+        });
+      }
+    });
+
+    // ===== Botones 3D =====
     btnStart.addEventListener('click', async ()=>{
       if(schedule.length){
         setSkyTexture(skyA,schedule[0].src);
         setOpacity(skyA,1); setOpacity(skyB,0);
         usingA=true; idx=0; setCaption(schedule[0].caption);
       }
-      try { await audio.play(); } catch(e) {}
+      try { await audio.play(); playLabel.setAttribute('text','value','⏸ Pausar'); } catch(e) {}
       if(rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(updateLoop);
     });
+
     btnVR.addEventListener('click', ()=> { try { scene.enterVR(); } catch(e) {} });
-    btnPlay.addEventListener('click', ()=> { if (audio.paused) audio.play(); else audio.pause(); });
-    btnPrev.addEventListener('click', ()=> {
-      const prev = Math.max(0, idx - 1);
-      audio.currentTime = schedule[prev].t + 0.01;
-      startFade(prev, true);
+    btnPlay.addEventListener('click', ()=> {
+      if (audio.paused){ audio.play(); playLabel.setAttribute('text','value','⏸ Pausar'); }
+      else { audio.pause(); playLabel.setAttribute('text','value','▶ Reproducir'); }
     });
-    btnNext.addEventListener('click', ()=> {
-      const next = Math.min(schedule.length - 1, idx + 1);
-      audio.currentTime = schedule[next].t + 0.01;
-      startFade(next, true);
+    btnPrev.addEventListener('click', ()=> { skipSec(-5); });
+    btnNext.addEventListener('click', ()=> { skipSec(+5); });
+
+    // ===== Overlay DOM =====
+    ovPlay.addEventListener('click', ()=> btnPlay.emit('click'));
+    ovExit.addEventListener('click', ()=> { try{ scene.exitVR(); }catch(e){} });
+    ovRecenter.addEventListener('click', ()=> {
+      // Re-centra el menú delante de la cámara (rig permanece en su sitio)
+      const anchor = document.getElementById('menuAnchor');
+      anchor.components['follow-ui']?.tick();
     });
 
-    // Reforzar estado al entrar a VR
+    // ===== Eventos XR =====
     scene.addEventListener('enter-vr', ()=>{
+      ov.hidden = false; // muestra overlay si dom-overlay está activo
+      // Refuerza opacidades para evitar flashing
       const current = usingA ? skyA : skyB;
       const other   = usingA ? skyB : skyA;
       setOpacity(current,1); setOpacity(other,0);
       forceMatUpdate(current); forceMatUpdate(other);
     });
+    scene.addEventListener('exit-vr', ()=>{ ov.hidden = true; });
 
-    // “Responsive” para menú (ajuste de escala/ distancia según aspect ratio)
+    // Joystick: saltos de 5 segundos con izquierda/derecha
+    function onStick(e){
+      const x = e.detail?.x || 0;
+      if (x > 0.95) { skipSec(+5); }
+      if (x < -0.95){ skipSec(-5); }
+    }
+    leftHand.addEventListener('thumbstickmoved', onStick);
+    rightHand.addEventListener('thumbstickmoved', onStick);
+
+    // Pausar animación en background y reanudar
+    document.addEventListener('visibilitychange', ()=>{
+      if (document.hidden){ if(rafId) cancelAnimationFrame(rafId); }
+      else { if(!rafId) rafId = requestAnimationFrame(updateLoop); }
+    });
+
+    // Fit inicial del menú (por si quieres variar por aspecto)
     function fitMenuToViewport(){
       const root = document.getElementById('menuRoot');
       const ar = window.innerWidth / window.innerHeight;
-      if (ar < 1.0) { // vertical/estrecho → acerca y escala un poco
-        root.setAttribute('position','0 0 -1.35');
-        root.setAttribute('scale','1.12 1.12 1');
-      } else {        // horizontal → distancia por defecto
-        root.setAttribute('position','0 0 -1.5');
-        root.setAttribute('scale','1 1 1');
-      }
+      if (ar < 1.0) { root.setAttribute('scale','1.12 1.12 1'); }
+      else { root.setAttribute('scale','1 1 1'); }
     }
     window.addEventListener('resize', fitMenuToViewport);
     fitMenuToViewport();
   </script>
 </body>
 </html>
-
 
