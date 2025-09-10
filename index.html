@@ -4,81 +4,108 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>La Guaca del Taita 360 — Quest 3</title>
-  <!-- A-Frame (WebXR) -->
+  <!-- A-Frame estable -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
     body { margin: 0; background: #000; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
-    #ui {
-      position: fixed; inset: 0; display: grid; place-items: center;
-      background: radial-gradient(1200px 800px at 50% 50%, rgba(0,0,0,.75), rgba(0,0,0,.95));
-      color: #fff; z-index: 10; text-align: center; padding: 24px;
-    }
-    #ui button {
-      font-size: 18px; padding: 12px 20px; border-radius: 12px; border: 0; cursor: pointer;
-      background: #14b8a6; color: #00110f; font-weight: 700; box-shadow: 0 8px 30px rgba(0,0,0,.35);
-    }
-    #caption {
-      position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
-      padding: 10px 16px; color: #fff; background: rgba(0,0,0,.55); border-radius: 10px; font-size: 18px;
-      backdrop-filter: blur(6px); z-index: 5; max-width: 92vw; text-align: center;
-    }
-    #hud {
-      position: fixed; left: 50%; top: 14px; transform: translateX(-50%);
-      display: flex; gap: 10px; z-index: 6; align-items: center;
-      background: rgba(0,0,0,.4); padding: 8px 10px; border-radius: 999px; backdrop-filter: blur(6px);
-    }
-    #hud button {
-      border: 0; border-radius: 999px; padding: 6px 10px; background: rgba(255,255,255,.1); color: #fff; cursor: pointer;
-    }
-    #time {
-      font-variant-numeric: tabular-nums; font-weight: 600; padding: 0 6px;
-    }
+    /* Botones 3D: le daremos feedback al pasar el puntero */
+    .btn { cursor: pointer; }
   </style>
 </head>
 <body>
-  <!-- UI para desbloquear audio por gesto del usuario -->
-  <div id="ui">
-    <div>
-      <h1 style="margin: 0 0 8px">La Guaca del Taita — 360</h1>
-      <p style="opacity:.9;max-width:740px;margin:0 auto 14px">
-        Reproduce un único audio (<code>media/relato.mp3</code>) y sincroniza panoramas 360 en los tiempos (segundos) indicados.
-      </p>
-      <button id="btnStart">Iniciar experiencia</button>
-      <p style="margin-top:10px;opacity:.7;font-size:13px">Sugerido: JPG/WebP 4096×2048 (o 8192×4096 si es necesario), calidad 70–80.</p>
-    </div>
-  </div>
-
-  <!-- HUD opcional -->
-  <div id="hud" hidden>
-    <button id="btnPrev" title="Anterior">⟨⟨</button>
-    <button id="btnPlay" title="Play/Pause">⏯</button>
-    <button id="btnNext" title="Siguiente">⟩⟩</button>
-    <span id="time">00:00</span>
-  </div>
-
-  <div id="caption" hidden></div>
-
   <!-- Audio fuente -->
   <audio id="track" preload="auto" src="media/relato.mp3" crossorigin="anonymous" playsinline></audio>
 
-  <!-- Escena A-Frame -->
   <a-scene
     background="color: #000000"
-    renderer="antialias: true; colorManagement: true; powerPreference: high-performance; physicallyCorrectLights: false"
+    renderer="antialias: true; colorManagement: true; powerPreference: high-performance; physicallyCorrectLights: false; alpha: false"
+    webxr="referenceSpaceType: local-floor; optionalFeatures: local-floor"
     vr-mode-ui="enabled: true">
 
     <a-assets timeout="60000">
-      <!-- placeholder mínimo para evitar warnings -->
+      <!-- placeholder mínimo -->
       <img id="placeholder" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAlEBz4Z7xvQAAAAASUVORK5CYII="/>
     </a-assets>
 
-    <!-- Doble cielo para crossfade de panoramas 360 -->
+    <!-- Cámara + cursores -->
+    <a-entity id="rig" position="0 1.6 0">
+      <a-entity id="cam" camera look-controls wasd-controls-enabled="false">
+        <!-- Cursor de ratón para escritorio -->
+        <a-entity id="mouseRay" cursor="rayOrigin: mouse"
+                  raycaster="objects: .clickable; far: 10"></a-entity>
+      </a-entity>
+      <!-- Controladores (láser) para VR -->
+      <a-entity laser-controls="hand: left"  raycaster="objects: .clickable; far: 10"></a-entity>
+      <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 10"></a-entity>
+    </a-entity>
+
+    <!-- Cielos (panoramas 360) con crossfade manual -->
     <a-sky id="skyA" radius="20"
            material="side: back; shader: flat; src: #placeholder; transparent: true; opacity: 1"></a-sky>
     <a-sky id="skyB" radius="20"
            material="side: back; shader: flat; src: #placeholder; transparent: true; opacity: 0"></a-sky>
+
+    <!-- ====== MENÚ 3D al estilo del ejemplo (a-text) ====== -->
+    <!-- Lo anclamos a la cámara para que “siga” la vista -->
+    <a-entity id="menuRoot" position="0 0 -1.7" rotation="0 0 0" scale="1 1 1" parent="#cam">
+      <!-- Panel de fondo -->
+      <a-entity geometry="primitive: plane; width: 1.2; height: 0.62"
+                material="color: #000; opacity: 0.55; transparent: true; shader: flat"
+                position="0 0 0"></a-entity>
+
+      <!-- Título (como en el ejemplo) -->
+      <a-text font="kelsonsans" value="La Guaca del Taita, Nariño"
+              width="1.1" position="-0.53 0.22 0.01" rotation="0 0 0" color="#FFF"></a-text>
+
+      <!-- Botones fila 1 -->
+      <a-entity id="btnStart" class="clickable btn"
+                geometry="primitive: plane; width: 0.32; height: 0.12"
+                material="color: #14b8a6; opacity: 0.95; shader: flat"
+                position="-0.38 0.05 0.01">
+        <a-text value="INICIAR" width="0.6" align="center" color="#00110f" position="0 0 0.01"></a-text>
+      </a-entity>
+
+      <a-entity id="btnVR" class="clickable btn"
+                geometry="primitive: plane; width: 0.32; height: 0.12"
+                material="color: #64748b; opacity: 0.95; shader: flat"
+                position="0.38 0.05 0.01">
+        <a-text value="ENTRAR VR" width="0.6" align="center" color="#fff" position="0 0 0.01"></a-text>
+      </a-entity>
+
+      <!-- Botones fila 2 -->
+      <a-entity id="btnPrev" class="clickable btn"
+                geometry="primitive: plane; width: 0.28; height: 0.12"
+                material="color: #334155; opacity: 0.95; shader: flat"
+                position="-0.54 -0.13 0.01">
+        <a-text value="⟨⟨ Anterior" width="0.55" align="center" color="#fff" position="0 0 0.01"></a-text>
+      </a-entity>
+
+      <a-entity id="btnPlay" class="clickable btn"
+                geometry="primitive: plane; width: 0.28; height: 0.12"
+                material="color: #0ea5e9; opacity: 0.95; shader: flat"
+                position="-0.12 -0.13 0.01">
+        <a-text id="playLabel" value="⏯ Play/Pause" width="0.55" align="center" color="#00111a" position="0 0 0.01"></a-text>
+      </a-entity>
+
+      <a-entity id="btnNext" class="clickable btn"
+                geometry="primitive: plane; width: 0.28; height: 0.12"
+                material="color: #334155; opacity: 0.95; shader: flat"
+                position="0.30 -0.13 0.01">
+        <a-text value="Siguiente ⟩⟩" width="0.55" align="center" color="#fff" position="0 0 0.01"></a-text>
+      </a-entity>
+
+      <!-- Tiempo estilo ejemplo (texto 3D) -->
+      <a-text id="time3d" font="kelsonsans" value="00:00"
+              width="0.8" position="0.52 -0.31 0.01" align="right" color="#fff"></a-text>
+    </a-entity>
+
+    <!-- “Caption” como en el ejemplo (texto 3D cerca al usuario) -->
+    <a-text id="caption3d" font="kelsonsans"
+            value="Pulsa INICIAR para comenzar"
+            width="1.6" position="-0.8 -0.45 -1.7" color="#fff" parent="#cam"></a-text>
+
   </a-scene>
 
   <script>
@@ -97,200 +124,160 @@
       { t: 70, src: 'media/escena_10.png', caption: 'Desde entonces, Amalia guardó en su corazón la certeza...' }
     ].sort((a,b)=>a.t-b.t);
 
-    const FADE_MS = 800; // duración del crossfade
+    const FADE_MS = 800;
 
-    const audio   = document.getElementById('track');
-    const btnUI   = document.getElementById('btnStart');
-    const overlay = document.getElementById('ui');
-    const caption = document.getElementById('caption');
+    // Elementos
+    const audio    = document.getElementById('track');
+    const scene    = document.querySelector('a-scene');
+    const skyA     = document.getElementById('skyA');
+    const skyB     = document.getElementById('skyB');
+    const caption3d= document.getElementById('caption3d');
+    const time3d   = document.getElementById('time3d');
 
-    const hud     = document.getElementById('hud');
-    const btnPrev = document.getElementById('btnPrev');
-    const btnPlay = document.getElementById('btnPlay');
-    const btnNext = document.getElementById('btnNext');
-    const timeBox = document.getElementById('time');
+    const btnStart = document.getElementById('btnStart');
+    const btnVR    = document.getElementById('btnVR');
+    const btnPrev  = document.getElementById('btnPrev');
+    const btnPlay  = document.getElementById('btnPlay');
+    const btnNext  = document.getElementById('btnNext');
 
-    const scene = document.querySelector('a-scene');
-    const skyA = document.getElementById('skyA');
-    const skyB = document.getElementById('skyB');
+    // Estado
+    let usingA = true, idx = -1, rafId = null;
+    let fading = false, fadeStart = 0, fadeDur = FADE_MS;
+    let frontEl = null, backEl  = null;
 
-    let usingA = true;       // cuál sky está al frente (opacidad 1)
-    let idx = -1;            // índice actual
-    let rafId = null;        // id del requestAnimationFrame
-    // Estado de fade manual
-    let fading = false;
-    let fadeStart = 0;
-    let fadeDur = FADE_MS;
-    let frontEl = null;
-    let backEl  = null;
+    // --------- Utilidades ----------
+    function setCaption(text){ caption3d.setAttribute('value', text || ''); }
+    function fmt(t){ t=Math.max(0, t|0); const m=(t/60)|0, s=t%60; return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; }
+    function findCueIndexAtTime(t){ let lo=0,hi=schedule.length-1,ans=-1; while(lo<=hi){ const mid=(lo+hi)>>1; if(schedule[mid].t<=t){ans=mid;lo=mid+1;} else hi=mid-1;} return ans; }
 
-    function setCaption(text) {
-      if (!text) { caption.hidden = true; caption.textContent = ''; return; }
-      caption.hidden = false; caption.textContent = text;
+    function setOpacity(el, v){
+      el.setAttribute('material','opacity',v);
+      const m = el.getObject3D('mesh')?.material;
+      if (m){ m.transparent = true; m.opacity = v; m.needsUpdate = true; if (m.map) m.map.needsUpdate = true; }
     }
 
-    function setOpacity(el, value) {
-      el.setAttribute('material', 'opacity', value);
+    function forceMatUpdate(el){
+      const m = el.getObject3D('mesh')?.material;
+      if (m){ if (m.map) m.map.needsUpdate = true; m.needsUpdate = true; }
     }
 
-    function setSkyTexture(el, url) {
-      el.setAttribute('material', 'transparent', true);
-      el.setAttribute('material', 'side', 'back');
-      // usar url() ayuda a algunos navegadores
-      el.setAttribute('material', 'src', `url(${url})`);
+    function setSkyTexture(el, url){
+      el.setAttribute('material','transparent',true);
+      el.setAttribute('material','side','back');
+      el.setAttribute('material','src',`url(${url})`);
+      const upd=()=>{ forceMatUpdate(el); el.removeEventListener('materialtextureloaded',upd); };
+      el.addEventListener('materialtextureloaded',upd);
+      setTimeout(upd,50); // fallback
     }
 
-    function fmt(t) {
-      t = Math.max(0, t|0);
-      const m = (t/60)|0, s = t%60;
-      return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-    }
-
-    function findCueIndexAtTime(t) {
-      // mayor i tal que schedule[i].t <= t (o -1 si antes del primero)
-      let lo = 0, hi = schedule.length - 1, ans = -1;
-      while (lo <= hi) {
-        const mid = (lo + hi) >> 1;
-        if (schedule[mid].t <= t) { ans = mid; lo = mid + 1; }
-        else { hi = mid - 1; }
+    function disposeTexture(el){
+      const mesh = el.getObject3D('mesh');
+      if (mesh && mesh.material){
+        const tex = mesh.material.map;
+        if (tex){ mesh.material.map = null; try{ tex.dispose(); }catch(_){ } mesh.material.needsUpdate = true; }
       }
-      return ans;
     }
 
-    function startFade(toIndex, instant = false) {
-      const cue = schedule[toIndex]; if (!cue) return;
-
-      // Definir front/back según cuál está visible ahora
+    function startFade(toIndex, instant=false){
+      const cue = schedule[toIndex]; if(!cue) return;
       frontEl = usingA ? skyA : skyB;
       backEl  = usingA ? skyB : skyA;
 
-      // Cargar textura de destino en el back
       setSkyTexture(backEl, cue.src);
+      setOpacity(backEl,0); setOpacity(frontEl,1);
 
-      // Forzar opacidades de inicio del crossfade
-      setOpacity(backEl, 0);
-      setOpacity(frontEl, 1);
-
-      if (instant || FADE_MS <= 0) {
-        setOpacity(backEl, 1);
-        setOpacity(frontEl, 0);
-        usingA = !usingA;
-        idx = toIndex;
-        setCaption(cue.caption);
-        fading = false;
-        return;
+      if (instant || FADE_MS<=0){
+        setOpacity(backEl,1); setOpacity(frontEl,0);
+        disposeTexture(frontEl);
+        usingA=!usingA; idx=toIndex; setCaption(cue.caption); fading=false; return;
       }
-
-      // Comenzar fade manual
-      fadeStart = performance.now();
-      fadeDur   = FADE_MS;
-      fading    = true;
-      idx       = toIndex;
-      setCaption(cue.caption);
+      fadeStart=performance.now(); fadeDur=FADE_MS; fading=true; idx=toIndex; setCaption(cue.caption);
     }
 
-    function updateFade(now) {
-      if (!fading) return;
-      const p = Math.min(1, (now - fadeStart) / fadeDur);
-      // lineal
-      setOpacity(backEl, p);
-      setOpacity(frontEl, 1 - p);
-
-      if (p >= 1) {
-        fading = false;
-        usingA = !usingA; // ahora el back pasó a ser front
-      }
+    function updateFade(now){
+      if(!fading) return;
+      const p=Math.min(1,(now-fadeStart)/fadeDur);
+      setOpacity(backEl,p); setOpacity(frontEl,1-p);
+      if(p>=1){ fading=false; disposeTexture(frontEl); usingA=!usingA; }
     }
 
-    function updateLoop(now) {
-      // Actualizar visor de tiempo
-      timeBox.textContent = fmt(audio.currentTime|0);
-
-      // Gestionar fade manual
+    function updateLoop(now){
+      time3d.setAttribute('value', fmt(audio.currentTime|0));
       updateFade(now);
-
-      // Selección de cue por tiempo real del audio
-      const ct = audio.currentTime || 0;
-      const target = findCueIndexAtTime(ct + 0.001);
-      if (target !== idx && target >= 0) {
-        const jump = Math.abs(target - idx) > 1; // si saltó mucho, sin fade
-        startFade(target, jump);
-      }
+      const ct=audio.currentTime||0;
+      const target = findCueIndexAtTime(ct+0.001);
+      if (target!==idx && target>=0) startFade(target, Math.abs(target-idx)>1);
       rafId = requestAnimationFrame(updateLoop);
     }
 
-    async function preloadImages(list) {
-      await Promise.all(list.map(item => new Promise(res => {
-        const im = new Image(); im.onload = res; im.onerror = res; im.src = item.src;
-      })));
+    // --------- Interacciones 3D ----------
+    // Efecto hover/press para botones 3D (ligero zoom)
+    function addButtonFX(el){
+      el.addEventListener('mouseenter', ()=> el.setAttribute('scale','1.05 1.05 1'));
+      el.addEventListener('mouseleave', ()=> el.setAttribute('scale','1 1 1'));
+      el.addEventListener('mousedown',  ()=> el.setAttribute('scale','0.97 0.97 1'));
+      el.addEventListener('mouseup',    ()=> el.setAttribute('scale','1.02 1.02 1'));
+      el.classList.add('clickable');
     }
+    [btnStart, btnVR, btnPrev, btnPlay, btnNext].forEach(addButtonFX);
 
-    async function startExperience() {
-      // Preload para evitar parpadeos
-      await preloadImages(schedule);
-
-      // Mostrar primera pano de una
-      if (schedule.length) {
-        setSkyTexture(skyA, schedule[0].src);
-        setOpacity(skyA, 1);
-        setOpacity(skyB, 0);
-        usingA = true; idx = 0; setCaption(schedule[0].caption);
+    // Botones
+    btnStart.addEventListener('click', async ()=>{
+      // Mostrar primera imagen y arrancar audio
+      if(schedule.length){
+        setSkyTexture(skyA,schedule[0].src);
+        setOpacity(skyA,1); setOpacity(skyB,0);
+        usingA=true; idx=0; setCaption(schedule[0].caption);
       }
-
-      try { await audio.play(); } catch (e) { console.warn('Audio bloqueado hasta interacción:', e); }
-
-      overlay.style.display = 'none';
-      hud.hidden = false;
-
-      if (rafId) cancelAnimationFrame(rafId);
+      try { await audio.play(); } catch(e) { /* espera siguiente click */ }
+      if(rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(updateLoop);
-
-      // Intentar entrar VR automáticamente (opcional)
-      try { scene.enterVR(); } catch(e) {}
-    }
-
-    // Reforzar estado al (re)entrar VR: re-aplicar opacidades y textura actual
-    scene.addEventListener('enter-vr', () => {
-      const current = usingA ? skyA : skyB;
-      const other   = usingA ? skyB : skyA;
-      // aseguramos side/back y transparencias
-      current.setAttribute('material','side','back');
-      other.setAttribute('material','side','back');
-      setOpacity(current, 1);
-      setOpacity(other, 0);
-      // forzar actualización del mapa de textura
-      try {
-        const m1 = current.getObject3D('mesh')?.material;
-        const m2 = other.getObject3D('mesh')?.material;
-        if (m1?.map) m1.map.needsUpdate = true;
-        if (m2?.map) m2.map.needsUpdate = true;
-      } catch(_) {}
     });
 
-    // Controles
-    btnUI.addEventListener('click', startExperience);
-    btnPlay.addEventListener('click', () => {
+    btnVR.addEventListener('click', ()=> {
+      try { scene.enterVR(); } catch(e) {}
+    });
+
+    btnPlay.addEventListener('click', ()=> {
       if (audio.paused) audio.play(); else audio.pause();
     });
-    btnPrev.addEventListener('click', () => {
+
+    btnPrev.addEventListener('click', ()=> {
       const prev = Math.max(0, idx - 1);
       audio.currentTime = schedule[prev].t + 0.01;
-      startFade(prev, /*instant*/ true);
-    });
-    btnNext.addEventListener('click', () => {
-      const next = Math.min(schedule.length - 1, idx + 1);
-      audio.currentTime = schedule[next].t + 0.01;
-      startFade(next, /*instant*/ true);
+      startFade(prev, true);
     });
 
-    // Tap en cualquier parte para play/pause (opcional)
-    document.addEventListener('click', (e) => {
-      if (e.target === btnUI || e.target.closest('#hud')) return;
-      if (overlay.style.display !== 'none') return; // aún no inicia
-      if (audio.paused) audio.play(); else audio.pause();
+    btnNext.addEventListener('click', ()=> {
+      const next = Math.min(schedule.length - 1, idx + 1);
+      audio.currentTime = schedule[next].t + 0.01;
+      startFade(next, true);
     });
+
+    // Reforzar estado al entrar a VR
+    scene.addEventListener('enter-vr', ()=>{
+      const current = usingA ? skyA : skyB;
+      const other   = usingA ? skyB : skyA;
+      setOpacity(current,1); setOpacity(other,0);
+      forceMatUpdate(current); forceMatUpdate(other);
+    });
+
+    // “Responsive” estilo showcase: si cambia aspect ratio, ajusta tamaño del menú
+    function fitMenuToViewport(){
+      const root = document.getElementById('menuRoot');
+      const ar = window.innerWidth / window.innerHeight;
+      // Más cerca y grande en pantallas verticales
+      if (ar < 1.0) {
+        root.setAttribute('position','0 0 -1.4');
+        root.setAttribute('scale','1.15 1.15 1');
+      } else {
+        root.setAttribute('position','0 0 -1.7');
+        root.setAttribute('scale','1 1 1');
+      }
+    }
+    window.addEventListener('resize', fitMenuToViewport);
+    fitMenuToViewport();
   </script>
 </body>
 </html>
-
 
