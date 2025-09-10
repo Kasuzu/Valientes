@@ -4,18 +4,17 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>La Guaca del Taita 360 — Quest 3</title>
-  <!-- A-Frame estable -->
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
     body { margin: 0; background: #000; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
-    /* Botones 3D: le daremos feedback al pasar el puntero */
     .btn { cursor: pointer; }
   </style>
 </head>
 <body>
-  <!-- Audio fuente -->
+  <!-- Audio -->
   <audio id="track" preload="auto" src="media/relato.mp3" crossorigin="anonymous" playsinline></audio>
 
   <a-scene
@@ -25,91 +24,89 @@
     vr-mode-ui="enabled: true">
 
     <a-assets timeout="60000">
-      <!-- placeholder mínimo -->
       <img id="placeholder" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAlEBz4Z7xvQAAAAASUVORK5CYII="/>
     </a-assets>
 
     <!-- Cámara + cursores -->
     <a-entity id="rig" position="0 1.6 0">
       <a-entity id="cam" camera look-controls wasd-controls-enabled="false">
-        <!-- Cursor de ratón para escritorio -->
+        <!-- ====== MENÚ 3D centrado (hijo de la cámara) ====== -->
+        <a-entity id="menuRoot" position="0 0 -1.5" rotation="0 0 0" scale="1 1 1">
+          <!-- Fondo -->
+          <a-entity geometry="primitive: plane; width: 1.2; height: 0.62"
+                    material="color: #000; opacity: 0.55; transparent: true; shader: flat"
+                    position="0 0 0"></a-entity>
+
+          <!-- Título -->
+          <a-text font="kelsonsans" value="La Guaca del Taita, Nariño"
+                  width="1.1" position="-0.53 0.22 0.01" color="#FFF"></a-text>
+
+          <!-- Botones fila 1 -->
+          <a-entity id="btnStart" class="clickable btn"
+                    geometry="primitive: plane; width: 0.32; height: 0.12"
+                    material="color: #14b8a6; opacity: 0.95; shader: flat"
+                    position="-0.38 0.05 0.01">
+            <a-text value="INICIAR" width="0.6" align="center" color="#00110f" position="0 0 0.01"></a-text>
+          </a-entity>
+
+          <a-entity id="btnVR" class="clickable btn"
+                    geometry="primitive: plane; width: 0.32; height: 0.12"
+                    material="color: #64748b; opacity: 0.95; shader: flat"
+                    position="0.38 0.05 0.01">
+            <a-text value="ENTRAR VR" width="0.6" align="center" color="#fff" position="0 0 0.01"></a-text>
+          </a-entity>
+
+          <!-- Botones fila 2 -->
+          <a-entity id="btnPrev" class="clickable btn"
+                    geometry="primitive: plane; width: 0.28; height: 0.12"
+                    material="color: #334155; opacity: 0.95; shader: flat"
+                    position="-0.54 -0.13 0.01">
+            <a-text value="⟨⟨ Anterior" width="0.55" align="center" color="#fff" position="0 0 0.01"></a-text>
+          </a-entity>
+
+          <a-entity id="btnPlay" class="clickable btn"
+                    geometry="primitive: plane; width: 0.28; height: 0.12"
+                    material="color: #0ea5e9; opacity: 0.95; shader: flat"
+                    position="-0.12 -0.13 0.01">
+            <a-text id="playLabel" value="⏯ Play/Pause" width="0.55" align="center" color="#00111a" position="0 0 0.01"></a-text>
+          </a-entity>
+
+          <a-entity id="btnNext" class="clickable btn"
+                    geometry="primitive: plane; width: 0.28; height: 0.12"
+                    material="color: #334155; opacity: 0.95; shader: flat"
+                    position="0.30 -0.13 0.01">
+            <a-text value="Siguiente ⟩⟩" width="0.55" align="center" color="#fff" position="0 0 0.01"></a-text>
+          </a-entity>
+
+          <!-- Tiempo -->
+          <a-text id="time3d" font="kelsonsans" value="00:00"
+                  width="0.8" position="0.52 -0.31 0.01" align="right" color="#fff"></a-text>
+        </a-entity>
+
+        <!-- Caption bajo el menú (también hijo de la cámara) -->
+        <a-text id="caption3d" font="kelsonsans"
+                value="Pulsa INICIAR para comenzar"
+                width="1.6" position="-0.8 -0.55 -1.5" color="#fff"></a-text>
+
+        <!-- Cursor mouse (desktop) -->
         <a-entity id="mouseRay" cursor="rayOrigin: mouse"
                   raycaster="objects: .clickable; far: 10"></a-entity>
       </a-entity>
-      <!-- Controladores (láser) para VR -->
+
+      <!-- Controles VR (láser) -->
       <a-entity laser-controls="hand: left"  raycaster="objects: .clickable; far: 10"></a-entity>
       <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 10"></a-entity>
     </a-entity>
 
-    <!-- Cielos (panoramas 360) con crossfade manual -->
+    <!-- Cielos 360 con crossfade -->
     <a-sky id="skyA" radius="20"
            material="side: back; shader: flat; src: #placeholder; transparent: true; opacity: 1"></a-sky>
     <a-sky id="skyB" radius="20"
            material="side: back; shader: flat; src: #placeholder; transparent: true; opacity: 0"></a-sky>
-
-    <!-- ====== MENÚ 3D al estilo del ejemplo (a-text) ====== -->
-    <!-- Lo anclamos a la cámara para que “siga” la vista -->
-    <a-entity id="menuRoot" position="0 0 -1.7" rotation="0 0 0" scale="1 1 1" parent="#cam">
-      <!-- Panel de fondo -->
-      <a-entity geometry="primitive: plane; width: 1.2; height: 0.62"
-                material="color: #000; opacity: 0.55; transparent: true; shader: flat"
-                position="0 0 0"></a-entity>
-
-      <!-- Título (como en el ejemplo) -->
-      <a-text font="kelsonsans" value="La Guaca del Taita, Nariño"
-              width="1.1" position="-0.53 0.22 0.01" rotation="0 0 0" color="#FFF"></a-text>
-
-      <!-- Botones fila 1 -->
-      <a-entity id="btnStart" class="clickable btn"
-                geometry="primitive: plane; width: 0.32; height: 0.12"
-                material="color: #14b8a6; opacity: 0.95; shader: flat"
-                position="-0.38 0.05 0.01">
-        <a-text value="INICIAR" width="0.6" align="center" color="#00110f" position="0 0 0.01"></a-text>
-      </a-entity>
-
-      <a-entity id="btnVR" class="clickable btn"
-                geometry="primitive: plane; width: 0.32; height: 0.12"
-                material="color: #64748b; opacity: 0.95; shader: flat"
-                position="0.38 0.05 0.01">
-        <a-text value="ENTRAR VR" width="0.6" align="center" color="#fff" position="0 0 0.01"></a-text>
-      </a-entity>
-
-      <!-- Botones fila 2 -->
-      <a-entity id="btnPrev" class="clickable btn"
-                geometry="primitive: plane; width: 0.28; height: 0.12"
-                material="color: #334155; opacity: 0.95; shader: flat"
-                position="-0.54 -0.13 0.01">
-        <a-text value="⟨⟨ Anterior" width="0.55" align="center" color="#fff" position="0 0 0.01"></a-text>
-      </a-entity>
-
-      <a-entity id="btnPlay" class="clickable btn"
-                geometry="primitive: plane; width: 0.28; height: 0.12"
-                material="color: #0ea5e9; opacity: 0.95; shader: flat"
-                position="-0.12 -0.13 0.01">
-        <a-text id="playLabel" value="⏯ Play/Pause" width="0.55" align="center" color="#00111a" position="0 0 0.01"></a-text>
-      </a-entity>
-
-      <a-entity id="btnNext" class="clickable btn"
-                geometry="primitive: plane; width: 0.28; height: 0.12"
-                material="color: #334155; opacity: 0.95; shader: flat"
-                position="0.30 -0.13 0.01">
-        <a-text value="Siguiente ⟩⟩" width="0.55" align="center" color="#fff" position="0 0 0.01"></a-text>
-      </a-entity>
-
-      <!-- Tiempo estilo ejemplo (texto 3D) -->
-      <a-text id="time3d" font="kelsonsans" value="00:00"
-              width="0.8" position="0.52 -0.31 0.01" align="right" color="#fff"></a-text>
-    </a-entity>
-
-    <!-- “Caption” como en el ejemplo (texto 3D cerca al usuario) -->
-    <a-text id="caption3d" font="kelsonsans"
-            value="Pulsa INICIAR para comenzar"
-            width="1.6" position="-0.8 -0.45 -1.7" color="#fff" parent="#cam"></a-text>
-
   </a-scene>
 
   <script>
-    // === Cronograma (en segundos) ===
+    // === Cronograma (seg) ===
     const schedule = [
       { t: 0,  src: 'media/titulo.png',    caption: 'La Guaca del Taita' },
       { t: 2,  src: 'media/escena_1.png',  caption: 'En lo alto de las montañas de Sandoná, vivía un anciano taita llamado Julián...' },
@@ -126,26 +123,26 @@
 
     const FADE_MS = 800;
 
-    // Elementos
-    const audio    = document.getElementById('track');
-    const scene    = document.querySelector('a-scene');
-    const skyA     = document.getElementById('skyA');
-    const skyB     = document.getElementById('skyB');
-    const caption3d= document.getElementById('caption3d');
-    const time3d   = document.getElementById('time3d');
+    // Refs
+    const audio     = document.getElementById('track');
+    const scene     = document.querySelector('a-scene');
+    const skyA      = document.getElementById('skyA');
+    const skyB      = document.getElementById('skyB');
+    const caption3d = document.getElementById('caption3d');
+    const time3d    = document.getElementById('time3d');
 
-    const btnStart = document.getElementById('btnStart');
-    const btnVR    = document.getElementById('btnVR');
-    const btnPrev  = document.getElementById('btnPrev');
-    const btnPlay  = document.getElementById('btnPlay');
-    const btnNext  = document.getElementById('btnNext');
+    const btnStart  = document.getElementById('btnStart');
+    const btnVR     = document.getElementById('btnVR');
+    const btnPrev   = document.getElementById('btnPrev');
+    const btnPlay   = document.getElementById('btnPlay');
+    const btnNext   = document.getElementById('btnNext');
 
     // Estado
     let usingA = true, idx = -1, rafId = null;
     let fading = false, fadeStart = 0, fadeDur = FADE_MS;
     let frontEl = null, backEl  = null;
 
-    // --------- Utilidades ----------
+    // Utils
     function setCaption(text){ caption3d.setAttribute('value', text || ''); }
     function fmt(t){ t=Math.max(0, t|0); const m=(t/60)|0, s=t%60; return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; }
     function findCueIndexAtTime(t){ let lo=0,hi=schedule.length-1,ans=-1; while(lo<=hi){ const mid=(lo+hi)>>1; if(schedule[mid].t<=t){ans=mid;lo=mid+1;} else hi=mid-1;} return ans; }
@@ -155,21 +152,18 @@
       const m = el.getObject3D('mesh')?.material;
       if (m){ m.transparent = true; m.opacity = v; m.needsUpdate = true; if (m.map) m.map.needsUpdate = true; }
     }
-
     function forceMatUpdate(el){
       const m = el.getObject3D('mesh')?.material;
       if (m){ if (m.map) m.map.needsUpdate = true; m.needsUpdate = true; }
     }
-
     function setSkyTexture(el, url){
       el.setAttribute('material','transparent',true);
       el.setAttribute('material','side','back');
       el.setAttribute('material','src',`url(${url})`);
       const upd=()=>{ forceMatUpdate(el); el.removeEventListener('materialtextureloaded',upd); };
       el.addEventListener('materialtextureloaded',upd);
-      setTimeout(upd,50); // fallback
+      setTimeout(upd,50);
     }
-
     function disposeTexture(el){
       const mesh = el.getObject3D('mesh');
       if (mesh && mesh.material){
@@ -193,14 +187,12 @@
       }
       fadeStart=performance.now(); fadeDur=FADE_MS; fading=true; idx=toIndex; setCaption(cue.caption);
     }
-
     function updateFade(now){
       if(!fading) return;
       const p=Math.min(1,(now-fadeStart)/fadeDur);
       setOpacity(backEl,p); setOpacity(frontEl,1-p);
       if(p>=1){ fading=false; disposeTexture(frontEl); usingA=!usingA; }
     }
-
     function updateLoop(now){
       time3d.setAttribute('value', fmt(audio.currentTime|0));
       updateFade(now);
@@ -210,8 +202,7 @@
       rafId = requestAnimationFrame(updateLoop);
     }
 
-    // --------- Interacciones 3D ----------
-    // Efecto hover/press para botones 3D (ligero zoom)
+    // FX botones
     function addButtonFX(el){
       el.addEventListener('mouseenter', ()=> el.setAttribute('scale','1.05 1.05 1'));
       el.addEventListener('mouseleave', ()=> el.setAttribute('scale','1 1 1'));
@@ -223,31 +214,22 @@
 
     // Botones
     btnStart.addEventListener('click', async ()=>{
-      // Mostrar primera imagen y arrancar audio
       if(schedule.length){
         setSkyTexture(skyA,schedule[0].src);
         setOpacity(skyA,1); setOpacity(skyB,0);
         usingA=true; idx=0; setCaption(schedule[0].caption);
       }
-      try { await audio.play(); } catch(e) { /* espera siguiente click */ }
+      try { await audio.play(); } catch(e) {}
       if(rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(updateLoop);
     });
-
-    btnVR.addEventListener('click', ()=> {
-      try { scene.enterVR(); } catch(e) {}
-    });
-
-    btnPlay.addEventListener('click', ()=> {
-      if (audio.paused) audio.play(); else audio.pause();
-    });
-
+    btnVR.addEventListener('click', ()=> { try { scene.enterVR(); } catch(e) {} });
+    btnPlay.addEventListener('click', ()=> { if (audio.paused) audio.play(); else audio.pause(); });
     btnPrev.addEventListener('click', ()=> {
       const prev = Math.max(0, idx - 1);
       audio.currentTime = schedule[prev].t + 0.01;
       startFade(prev, true);
     });
-
     btnNext.addEventListener('click', ()=> {
       const next = Math.min(schedule.length - 1, idx + 1);
       audio.currentTime = schedule[next].t + 0.01;
@@ -262,16 +244,15 @@
       forceMatUpdate(current); forceMatUpdate(other);
     });
 
-    // “Responsive” estilo showcase: si cambia aspect ratio, ajusta tamaño del menú
+    // “Responsive” para menú (ajuste de escala/ distancia según aspect ratio)
     function fitMenuToViewport(){
       const root = document.getElementById('menuRoot');
       const ar = window.innerWidth / window.innerHeight;
-      // Más cerca y grande en pantallas verticales
-      if (ar < 1.0) {
-        root.setAttribute('position','0 0 -1.4');
-        root.setAttribute('scale','1.15 1.15 1');
-      } else {
-        root.setAttribute('position','0 0 -1.7');
+      if (ar < 1.0) { // vertical/estrecho → acerca y escala un poco
+        root.setAttribute('position','0 0 -1.35');
+        root.setAttribute('scale','1.12 1.12 1');
+      } else {        // horizontal → distancia por defecto
+        root.setAttribute('position','0 0 -1.5');
         root.setAttribute('scale','1 1 1');
       }
     }
@@ -280,4 +261,5 @@
   </script>
 </body>
 </html>
+
 
